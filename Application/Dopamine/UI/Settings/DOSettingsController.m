@@ -274,6 +274,14 @@
                 PSSpecifier *hidePerAppSpecifier = [PSSpecifier preferenceSpecifierNamed:DOLocalizedString(@"Settings_Hide_Jailbreak_Per_App") target:self set:nil get:nil detail:[DOHideJailbreakAppsController class] cell:PSLinkCell edit:nil];
                 [hidePerAppSpecifier setProperty:@YES forKey:@"enabled"];
                 [specifiers addObject:hidePerAppSpecifier];
+
+                PSSpecifier *blacklistGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
+                [blacklistGroupSpecifier setProperty:DOLocalizedString(@"Hint_Blacklist_Apps") forKey:@"footerText"];
+                [specifiers addObject:blacklistGroupSpecifier];
+
+                PSSpecifier *blacklistSpecifier = [PSSpecifier preferenceSpecifierNamed:DOLocalizedString(@"Settings_Blacklist_Apps") target:self set:nil get:nil detail:[DOBlacklistAppsController class] cell:PSLinkCell edit:nil];
+                [blacklistSpecifier setProperty:@YES forKey:@"enabled"];
+                [specifiers addObject:blacklistSpecifier];
             }
             
             if (!envManager.isJailbroken && !envManager.isInstalledThroughTrollStore) {

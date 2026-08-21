@@ -57,7 +57,9 @@
 "Hint_Hide_Jailbreak" = "\"Hide Jailbreak\" temporarily removes jailbreak-related files until the next rejailbreak";
 "Hint_Hide_Jailbreak_Jailbroken" = "\"Hide Jailbreak\" partially disables the jailbreak and aims to make detection more challenging. However, it is not entirely effective and does not conceal everything.";
 "Hint_Hide_Jailbreak_Per_App" = "Selected apps will not load tweaks, and jailbreak paths such as /var/jb are hidden from them. Relaunch the app after changing this setting. This does not hide every possible detection vector.";
+"Hint_Blacklist_Apps" = "Blacklisted apps will not receive any jailbreak injection at all (no systemhook, no tweaks). Prefer this when Hide is not enough or causes issues. Relaunch the app after changing this setting.";
 "Settings_Hide_Jailbreak_Per_App" = "Hide Jailbreak per App";
+"Settings_Blacklist_Apps" = "Blacklist Apps";
 "Hide_Jailbreak_No_Apps" = "No user apps found";
 "Section_Jailbreak_Settings" = "Jailbreak Settings";
 "Section_Actions" = "Actions";

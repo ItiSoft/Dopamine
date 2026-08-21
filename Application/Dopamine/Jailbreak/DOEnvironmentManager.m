@@ -659,11 +659,11 @@ extern char **environ;
     }
 }
 
-- (NSArray <NSString *> *)hideJailbreakApps
+- (NSArray <NSString *> *)bundleIdentifiersForConfigKey:(NSString *)key
 {
     __block NSArray *apps = nil;
     void (^readBlock)(void) = ^{
-        NSArray *stored = [self jailbreakConfigDictionary][@"HideJailbreakApps"];
+        NSArray *stored = [self jailbreakConfigDictionary][key];
         if ([stored isKindOfClass:[NSArray class]]) {
             apps = stored;
         }
@@ -681,7 +681,7 @@ extern char **environ;
     return apps ?: @[];
 }
 
-- (void)setHideJailbreakApps:(NSArray <NSString *> *)bundleIdentifiers
+- (void)setBundleIdentifiers:(NSArray <NSString *> *)bundleIdentifiers forConfigKey:(NSString *)key
 {
     NSMutableDictionary *config = nil;
     if ([self isJailbroken]) {
@@ -700,12 +700,39 @@ extern char **environ;
     NSArray *sorted = [[NSSet setWithArray:bundleIdentifiers ?: @[]] allObjects];
     sorted = [sorted sortedArrayUsingSelector:@selector(compare:)];
     if (sorted.count > 0) {
-        config[@"HideJailbreakApps"] = sorted;
+        config[key] = sorted;
     }
     else {
-        [config removeObjectForKey:@"HideJailbreakApps"];
+        [config removeObjectForKey:key];
     }
     [self writeJailbreakConfigDictionary:config];
+}
+
+- (void)setBundleIdentifier:(NSString *)bundleIdentifier enabled:(BOOL)enabled forConfigKey:(NSString *)key
+{
+    if (bundleIdentifier.length == 0) return;
+
+    NSMutableArray *apps = [[self bundleIdentifiersForConfigKey:key] mutableCopy] ?: [NSMutableArray new];
+    NSUInteger index = [apps indexOfObject:bundleIdentifier];
+    if (enabled) {
+        if (index == NSNotFound) {
+            [apps addObject:bundleIdentifier];
+        }
+    }
+    else if (index != NSNotFound) {
+        [apps removeObjectAtIndex:index];
+    }
+    [self setBundleIdentifiers:apps forConfigKey:key];
+}
+
+- (NSArray <NSString *> *)hideJailbreakApps
+{
+    return [self bundleIdentifiersForConfigKey:@"HideJailbreakApps"];
+}
+
+- (void)setHideJailbreakApps:(NSArray <NSString *> *)bundleIdentifiers
+{
+    [self setBundleIdentifiers:bundleIdentifiers forConfigKey:@"HideJailbreakApps"];
 }
 
 - (BOOL)isJailbreakHiddenForApp:(NSString *)bundleIdentifier
@@ -716,19 +743,36 @@ extern char **environ;
 
 - (void)setJailbreakHidden:(BOOL)hidden forApp:(NSString *)bundleIdentifier
 {
-    if (bundleIdentifier.length == 0) return;
-
-    NSMutableArray *apps = [[self hideJailbreakApps] mutableCopy] ?: [NSMutableArray new];
-    NSUInteger index = [apps indexOfObject:bundleIdentifier];
+    [self setBundleIdentifier:bundleIdentifier enabled:hidden forConfigKey:@"HideJailbreakApps"];
     if (hidden) {
-        if (index == NSNotFound) {
-            [apps addObject:bundleIdentifier];
-        }
+        // Hide and blacklist are mutually exclusive
+        [self setBundleIdentifier:bundleIdentifier enabled:NO forConfigKey:@"ProcessBlacklistApps"];
     }
-    else if (index != NSNotFound) {
-        [apps removeObjectAtIndex:index];
+}
+
+- (NSArray <NSString *> *)blacklistedApps
+{
+    return [self bundleIdentifiersForConfigKey:@"ProcessBlacklistApps"];
+}
+
+- (void)setBlacklistedApps:(NSArray <NSString *> *)bundleIdentifiers
+{
+    [self setBundleIdentifiers:bundleIdentifiers forConfigKey:@"ProcessBlacklistApps"];
+}
+
+- (BOOL)isAppBlacklisted:(NSString *)bundleIdentifier
+{
+    if (bundleIdentifier.length == 0) return NO;
+    return [[self blacklistedApps] containsObject:bundleIdentifier];
+}
+
+- (void)setAppBlacklisted:(BOOL)blacklisted forBundleIdentifier:(NSString *)bundleIdentifier
+{
+    [self setBundleIdentifier:bundleIdentifier enabled:blacklisted forConfigKey:@"ProcessBlacklistApps"];
+    if (blacklisted) {
+        // Hide and blacklist are mutually exclusive
+        [self setBundleIdentifier:bundleIdentifier enabled:NO forConfigKey:@"HideJailbreakApps"];
     }
-    [self setHideJailbreakApps:apps];
 }
 
 - (BOOL)isJailbreakHidden

@@ -74,6 +74,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)isJailbreakHiddenForApp:(NSString *)bundleIdentifier;
 - (void)setJailbreakHidden:(BOOL)hidden forApp:(NSString *)bundleIdentifier;
 
+- (NSArray <NSString *> *)blacklistedApps;
+- (void)setBlacklistedApps:(NSArray <NSString *> *)bundleIdentifiers;
+- (BOOL)isAppBlacklisted:(NSString *)bundleIdentifier;
+- (void)setAppBlacklisted:(BOOL)blacklisted forBundleIdentifier:(NSString *)bundleIdentifier;
+
 - (BOOL)isPACBypassRequired;
 - (BOOL)isPPLBypassRequired;
 

@@ -183,7 +183,24 @@ bool should_hide_jailbreak_for_executable(const char *path)
 static bool should_skip_inject_for_executable(const char *path)
 {
 	if (!path) return false;
-	return config_array_contains_string(jbuserconfig_get_value("ProcessBlacklist"), path);
+
+	// Legacy path-based blacklist
+	if (config_array_contains_string(jbuserconfig_get_value("ProcessBlacklist"), path)) {
+		return true;
+	}
+
+	// Per-app blacklist by bundle identifier
+	xpc_object_t blacklistApps = jbuserconfig_get_value("ProcessBlacklistApps");
+	if (!blacklistApps || xpc_get_type(blacklistApps) != XPC_TYPE_ARRAY || xpc_array_get_count(blacklistApps) == 0) {
+		return false;
+	}
+
+	char bundleId[256];
+	if (!bundle_id_for_executable_path(path, bundleId, sizeof(bundleId))) {
+		return false;
+	}
+
+	return config_array_contains_string(blacklistApps, bundleId);
 }
 
 static kSpawnConfig spawn_config_for_executable(const char* path, char *const argv[restrict])

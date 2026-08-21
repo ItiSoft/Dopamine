@@ -27,10 +27,24 @@
 
 @implementation DOHideJailbreakAppsController
 
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        _mode = DOAppConfigListModeHide;
+    }
+    return self;
+}
+
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    self.title = DOLocalizedString(@"Settings_Hide_Jailbreak_Per_App");
+    if (self.mode == DOAppConfigListModeBlacklist) {
+        self.title = DOLocalizedString(@"Settings_Blacklist_Apps");
+    }
+    else {
+        self.title = DOLocalizedString(@"Settings_Hide_Jailbreak_Per_App");
+    }
     [self loadUserApps];
 }
 
@@ -73,14 +87,20 @@
     NSMutableArray *specifiers = [NSMutableArray new];
 
     PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
+    if (self.mode == DOAppConfigListModeBlacklist) {
+        [group setProperty:DOLocalizedString(@"Hint_Blacklist_Apps") forKey:@"footerText"];
+    }
+    else {
+        [group setProperty:DOLocalizedString(@"Hint_Hide_Jailbreak_Per_App") forKey:@"footerText"];
+    }
     [specifiers addObject:group];
 
     for (LSApplicationProxy *app in _userApps) {
         NSString *title = app.localizedName.length ? app.localizedName : app.applicationIdentifier;
         PSSpecifier *specifier = [PSSpecifier preferenceSpecifierNamed:title
                                                                 target:self
-                                                                   set:@selector(setAppHidden:specifier:)
-                                                                   get:@selector(readAppHidden:)
+                                                                   set:@selector(setAppEnabled:specifier:)
+                                                                   get:@selector(readAppEnabled:)
                                                                 detail:nil
                                                                   cell:PSSwitchCell
                                                                   edit:nil];
@@ -106,16 +126,35 @@
     return _specifiers;
 }
 
-- (id)readAppHidden:(PSSpecifier *)specifier
+- (id)readAppEnabled:(PSSpecifier *)specifier
 {
     NSString *bundleId = [specifier propertyForKey:@"bundleIdentifier"];
-    return @([[DOEnvironmentManager sharedManager] isJailbreakHiddenForApp:bundleId]);
+    DOEnvironmentManager *env = [DOEnvironmentManager sharedManager];
+    if (self.mode == DOAppConfigListModeBlacklist) {
+        return @([env isAppBlacklisted:bundleId]);
+    }
+    return @([env isJailbreakHiddenForApp:bundleId]);
 }
 
-- (void)setAppHidden:(id)value specifier:(PSSpecifier *)specifier
+- (void)setAppEnabled:(id)value specifier:(PSSpecifier *)specifier
 {
     NSString *bundleId = [specifier propertyForKey:@"bundleIdentifier"];
-    [[DOEnvironmentManager sharedManager] setJailbreakHidden:[value boolValue] forApp:bundleId];
+    DOEnvironmentManager *env = [DOEnvironmentManager sharedManager];
+    if (self.mode == DOAppConfigListModeBlacklist) {
+        [env setAppBlacklisted:[value boolValue] forBundleIdentifier:bundleId];
+    }
+    else {
+        [env setJailbreakHidden:[value boolValue] forApp:bundleId];
+    }
+}
+
+@end
+
+@implementation DOBlacklistAppsController
+
+- (DOAppConfigListMode)mode
+{
+    return DOAppConfigListModeBlacklist;
 }
 
 @end
