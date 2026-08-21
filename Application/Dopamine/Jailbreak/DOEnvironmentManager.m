@@ -630,6 +630,107 @@ extern char **environ;
     return [self spawnJbctlAsRootWithArgs:@[@"internal", @"protection", arg]];
 }
 
+- (NSString *)jailbreakConfigPath
+{
+    return JBROOT_PATH(@"/basebin/config.plist");
+}
+
+- (NSMutableDictionary *)jailbreakConfigDictionary
+{
+    NSString *configPath = [self jailbreakConfigPath];
+    NSMutableDictionary *config = [NSMutableDictionary dictionaryWithContentsOfFile:configPath];
+    return config ?: [NSMutableDictionary new];
+}
+
+- (void)writeJailbreakConfigDictionary:(NSDictionary *)config
+{
+    NSString *configPath = [self jailbreakConfigPath];
+    void (^writeBlock)(void) = ^{
+        [config writeToFile:configPath atomically:YES];
+    };
+
+    if ([self isJailbroken]) {
+        [self runAsRoot:^{
+            [self runUnsandboxed:writeBlock];
+        }];
+    }
+    else {
+        writeBlock();
+    }
+}
+
+- (NSArray <NSString *> *)hideJailbreakApps
+{
+    __block NSArray *apps = nil;
+    void (^readBlock)(void) = ^{
+        NSArray *stored = [self jailbreakConfigDictionary][@"HideJailbreakApps"];
+        if ([stored isKindOfClass:[NSArray class]]) {
+            apps = stored;
+        }
+    };
+
+    if ([self isJailbroken]) {
+        [self runAsRoot:^{
+            [self runUnsandboxed:readBlock];
+        }];
+    }
+    else {
+        readBlock();
+    }
+
+    return apps ?: @[];
+}
+
+- (void)setHideJailbreakApps:(NSArray <NSString *> *)bundleIdentifiers
+{
+    NSMutableDictionary *config = nil;
+    if ([self isJailbroken]) {
+        __block NSMutableDictionary *loaded = nil;
+        [self runAsRoot:^{
+            [self runUnsandboxed:^{
+                loaded = [self jailbreakConfigDictionary];
+            }];
+        }];
+        config = loaded ?: [NSMutableDictionary new];
+    }
+    else {
+        config = [self jailbreakConfigDictionary];
+    }
+
+    NSArray *sorted = [[NSSet setWithArray:bundleIdentifiers ?: @[]] allObjects];
+    sorted = [sorted sortedArrayUsingSelector:@selector(compare:)];
+    if (sorted.count > 0) {
+        config[@"HideJailbreakApps"] = sorted;
+    }
+    else {
+        [config removeObjectForKey:@"HideJailbreakApps"];
+    }
+    [self writeJailbreakConfigDictionary:config];
+}
+
+- (BOOL)isJailbreakHiddenForApp:(NSString *)bundleIdentifier
+{
+    if (bundleIdentifier.length == 0) return NO;
+    return [[self hideJailbreakApps] containsObject:bundleIdentifier];
+}
+
+- (void)setJailbreakHidden:(BOOL)hidden forApp:(NSString *)bundleIdentifier
+{
+    if (bundleIdentifier.length == 0) return;
+
+    NSMutableArray *apps = [[self hideJailbreakApps] mutableCopy] ?: [NSMutableArray new];
+    NSUInteger index = [apps indexOfObject:bundleIdentifier];
+    if (hidden) {
+        if (index == NSNotFound) {
+            [apps addObject:bundleIdentifier];
+        }
+    }
+    else if (index != NSNotFound) {
+        [apps removeObjectAtIndex:index];
+    }
+    [self setHideJailbreakApps:apps];
+}
+
 - (BOOL)isJailbreakHidden
 {
     return ![[NSFileManager defaultManager] fileExistsAtPath:@"/var/jb"];

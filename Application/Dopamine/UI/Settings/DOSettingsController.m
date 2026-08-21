@@ -20,6 +20,7 @@
 #import "DOSceneDelegate.h"
 #import "DOPSJetsamListItemsController.h"
 #import "DOButtonCell.h"
+#import "DOHideJailbreakAppsController.h"
 
 @interface DOSettingsController ()
 
@@ -264,6 +265,16 @@
             [jetsamSpecifier setProperty:@"jetsamOptionNumbers" forKey:@"valuesDataSource"];
             [jetsamSpecifier setProperty:@"jetsamOptionTitles" forKey:@"titlesDataSource"];
             [specifiers addObject:jetsamSpecifier];
+
+            if (envManager.isJailbroken) {
+                PSSpecifier *hidePerAppGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
+                [hidePerAppGroupSpecifier setProperty:DOLocalizedString(@"Hint_Hide_Jailbreak_Per_App") forKey:@"footerText"];
+                [specifiers addObject:hidePerAppGroupSpecifier];
+
+                PSSpecifier *hidePerAppSpecifier = [PSSpecifier preferenceSpecifierNamed:DOLocalizedString(@"Settings_Hide_Jailbreak_Per_App") target:self set:nil get:nil detail:[DOHideJailbreakAppsController class] cell:PSLinkCell edit:nil];
+                [hidePerAppSpecifier setProperty:@YES forKey:@"enabled"];
+                [specifiers addObject:hidePerAppSpecifier];
+            }
             
             if (!envManager.isJailbroken && !envManager.isInstalledThroughTrollStore) {
                 PSSpecifier *removeJailbreakSwitchSpecifier = [PSSpecifier preferenceSpecifierNamed:DOLocalizedString(@"Button_Remove_Jailbreak") target:self set:@selector(setRemoveJailbreakEnabled:specifier:) get:defGetter detail:nil cell:PSSwitchCell edit:nil];

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		040622AA2B77FE8E00393AAD /* DOPkgManagerPickerViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 040622A92B77FE8E00393AAD /* DOPkgManagerPickerViewController.m */; };
 		042479A22B66916B0082581B /* DOCreditsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0424796B2B66916B0082581B /* DOCreditsViewController.m */; };
+		F1A2B3C42E9F0101000001 /* DOHideJailbreakAppsController.m in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C42E9F0101000003 /* DOHideJailbreakAppsController.m */; };
 		042479A32B66916B0082581B /* DOSettingsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0424796C2B66916B0082581B /* DOSettingsController.m */; };
 		042479A42B66916B0082581B /* Credits.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0424796F2B66916B0082581B /* Credits.plist */; };
 		042479A52B66916B0082581B /* DOCreditsCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 042479732B66916B0082581B /* DOCreditsCell.m */; };
@@ -395,6 +396,8 @@
 		0424796E2B66916B0082581B /* DOCreditsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DOCreditsViewController.h; sourceTree = "<group>"; };
 		0424796F2B66916B0082581B /* Credits.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Credits.plist; sourceTree = "<group>"; };
 		042479702B66916B0082581B /* DOSettingsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DOSettingsController.h; sourceTree = "<group>"; };
+		F1A2B3C42E9F0101000002 /* DOHideJailbreakAppsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DOHideJailbreakAppsController.h; sourceTree = "<group>"; };
+		F1A2B3C42E9F0101000003 /* DOHideJailbreakAppsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DOHideJailbreakAppsController.m; sourceTree = "<group>"; };
 		042479722B66916B0082581B /* DOHeaderCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DOHeaderCell.h; sourceTree = "<group>"; };
 		042479732B66916B0082581B /* DOCreditsCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DOCreditsCell.m; sourceTree = "<group>"; };
 		042479742B66916B0082581B /* DOButtonCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DOButtonCell.h; sourceTree = "<group>"; };
@@ -886,6 +889,8 @@
 				0424796F2B66916B0082581B /* Credits.plist */,
 				0424796E2B66916B0082581B /* DOCreditsViewController.h */,
 				0424796B2B66916B0082581B /* DOCreditsViewController.m */,
+				F1A2B3C42E9F0101000002 /* DOHideJailbreakAppsController.h */,
+				F1A2B3C42E9F0101000003 /* DOHideJailbreakAppsController.m */,
 				042479702B66916B0082581B /* DOSettingsController.h */,
 				0424796C2B66916B0082581B /* DOSettingsController.m */,
 				04DD0B332B7BA38C0055DE4F /* DOLicenseViewController.h */,
@@ -2276,6 +2281,7 @@
 				042479A62B66916B0082581B /* DOHeaderCell.m in Sources */,
 				8C6599DD2C555A71000FF57F /* DOPSJetsamListItemsController.h in Sources */,
 				042479A22B66916B0082581B /* DOCreditsViewController.m in Sources */,
+				F1A2B3C42E9F0101000001 /* DOHideJailbreakAppsController.m in Sources */,
 				042479B32B66916B0082581B /* DODebugLogView.m in Sources */,
 				042479AF2B66916B0082581B /* DONavigationController.m in Sources */,
 				04C246AE2B74ACA200E17924 /* DOAppSwitch.m in Sources */,

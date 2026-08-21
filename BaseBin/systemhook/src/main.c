@@ -14,6 +14,7 @@
 #include <libjailbreak/hookd.h>
 #include "../dyldhook/src/dyld_jbinfo.h"
 #include "common/hookd_external.h"
+#include "hidejb.h"
 #include <choma/CSBlob.h>
 #include "litehook.h"
 #include "sandbox.h"
@@ -26,7 +27,7 @@ char *JB_BootUUID = NULL;
 char *JB_RootPath = NULL;
 char *get_jbroot(void) { return JB_RootPath; }
 
-static char gExecutablePath[PATH_MAX];
+char gExecutablePath[PATH_MAX];
 static int load_executable_path(void)
 {
 	char executablePath[PATH_MAX];
@@ -197,6 +198,10 @@ int csops_audittoken_hook(pid_t pid, unsigned int ops, void *useraddr, size_t us
 
 bool should_enable_tweaks(void)
 {
+	if (hidejb_is_enabled()) {
+		return false;
+	}
+
 	if (access(JBROOT_PATH("/basebin/.safe_mode"), F_OK) == 0) {
 		return false;
 	}
@@ -449,13 +454,17 @@ __attribute__((constructor)) static void initializer(void)
 #endif
 
 	if (load_executable_path() == 0) {
+		// Apply per-app jailbreak path hiding before anything else that may touch JB paths
+		hidejb_apply_hooks();
+
 		// Load rootlesshooks / watchdoghook when neccessary
-		if (!strcmp(gExecutablePath, "/usr/sbin/cfprefsd") ||
+		if (!hidejb_is_enabled() && (
+			!strcmp(gExecutablePath, "/usr/sbin/cfprefsd") ||
 			!strcmp(gExecutablePath, "/System/Library/CoreServices/SpringBoard.app/SpringBoard") ||
-			!strcmp(gExecutablePath, "/usr/libexec/lsd")) {
+			!strcmp(gExecutablePath, "/usr/libexec/lsd"))) {
 			dlopen(JBROOT_PATH("/basebin/rootlesshooks.dylib"), RTLD_NOW);
 		}
-		else if (!strcmp(gExecutablePath, "/usr/libexec/watchdogd")) {
+		else if (!hidejb_is_enabled() && !strcmp(gExecutablePath, "/usr/libexec/watchdogd")) {
 			dlopen(JBROOT_PATH("/basebin/watchdoghook.dylib"), RTLD_NOW);
 		}
 

@@ -118,8 +118,78 @@ xpc_object_t jbuserconfig_get_value(const char *key)
 	return NULL;
 }
 
+static bool config_array_contains_string(xpc_object_t array, const char *string)
+{
+	if (!array || !string || xpc_get_type(array) != XPC_TYPE_ARRAY) return false;
+
+	size_t count = xpc_array_get_count(array);
+	for (size_t i = 0; i < count; i++) {
+		const char *entry = xpc_array_get_string(array, i);
+		if (entry && !strcmp(entry, string)) return true;
+	}
+	return false;
+}
+
+static bool bundle_id_for_executable_path(const char *path, char *outBundleId, size_t outSize)
+{
+	if (!path || !outBundleId || outSize == 0) return false;
+
+	const char *lastSlash = strrchr(path, '/');
+	if (!lastSlash || lastSlash == path) return false;
+
+	size_t dirLen = (size_t)(lastSlash - path);
+	char infoPlistPath[PATH_MAX];
+	if (dirLen + sizeof("/Info.plist") > sizeof(infoPlistPath)) return false;
+
+	memcpy(infoPlistPath, path, dirLen);
+	infoPlistPath[dirLen] = '\0';
+	strlcat(infoPlistPath, "/Info.plist", sizeof(infoPlistPath));
+
+	if (access(infoPlistPath, R_OK) != 0) return false;
+
+	xpc_object_t plist = xpc_object_from_plist(infoPlistPath);
+	if (!plist || xpc_get_type(plist) != XPC_TYPE_DICTIONARY) {
+		if (plist) xpc_release(plist);
+		return false;
+	}
+
+	const char *bundleId = xpc_dictionary_get_string(plist, "CFBundleIdentifier");
+	bool ok = false;
+	if (bundleId && bundleId[0] != '\0') {
+		strlcpy(outBundleId, bundleId, outSize);
+		ok = true;
+	}
+	xpc_release(plist);
+	return ok;
+}
+
+bool should_hide_jailbreak_for_executable(const char *path)
+{
+	if (!path) return false;
+
+	xpc_object_t hideApps = jbuserconfig_get_value("HideJailbreakApps");
+	if (!hideApps || xpc_get_type(hideApps) != XPC_TYPE_ARRAY || xpc_array_get_count(hideApps) == 0) {
+		return false;
+	}
+
+	char bundleId[256];
+	if (!bundle_id_for_executable_path(path, bundleId, sizeof(bundleId))) {
+		return false;
+	}
+
+	return config_array_contains_string(hideApps, bundleId);
+}
+
+static bool should_skip_inject_for_executable(const char *path)
+{
+	if (!path) return false;
+	return config_array_contains_string(jbuserconfig_get_value("ProcessBlacklist"), path);
+}
+
 static kSpawnConfig spawn_config_for_executable(const char* path, char *const argv[restrict])
 {
+	(void)argv;
+
 	// Blacklist to ensure general system stability
 	// I don't like this but for some processes it seems neccessary
 	const char *processBlacklist[] = {
@@ -134,12 +204,13 @@ static kSpawnConfig spawn_config_for_executable(const char* path, char *const ar
 		if (!strcmp(processBlacklist[i], path)) return 0;
 	}
 
-	xpc_object_t userBlacklist = jbuserconfig_get_value("ProcessBlacklist");
-	if (userBlacklist && xpc_get_type(userBlacklist) == XPC_TYPE_ARRAY) {
-		size_t userBlacklistCount = xpc_array_get_count(userBlacklist);
-		for (size_t i = 0; i < userBlacklistCount; i++) {
-			if (!strcmp(xpc_array_get_string(userBlacklist, i), path)) return kSpawnConfigTrust;
-		}
+	if (should_skip_inject_for_executable(path)) {
+		return kSpawnConfigTrust;
+	}
+
+	if (should_hide_jailbreak_for_executable(path)) {
+		// Still inject so we can hide jailbreak paths from the process
+		return (kSpawnConfigInject | kSpawnConfigTrust | kSpawnConfigHide);
 	}
 
 	return (kSpawnConfigInject | kSpawnConfigTrust);
@@ -187,6 +258,10 @@ static int spawn_exec_hook_common(bool isExec,
 	}
 
 	int JBEnvAlreadyInsertedCount = (int)systemHookAlreadyInserted;
+
+	const char *existingHide = envbuf_getenv((const char **)envp, "JB_HIDE");
+	bool hideAlreadySet = existingHide && !strcmp(existingHide, "1");
+	bool wantsHide = (spawnConfig & kSpawnConfigHide) != 0;
 
 	// Check if we can find at least one reason to not insert jailbreak related environment variables
 	// In this case we also need to remove pre existing environment variables if they are already set
@@ -296,7 +371,7 @@ static int spawn_exec_hook_common(bool isExec,
 
 	pid_t childPid = -1;
 
-	if ((shouldInsertJBEnv && JBEnvAlreadyInsertedCount == 1) || (!shouldInsertJBEnv && JBEnvAlreadyInsertedCount == 0 && !hasSafeModeVariable)) {
+	if ((shouldInsertJBEnv && JBEnvAlreadyInsertedCount == 1 && wantsHide == hideAlreadySet) || (!shouldInsertJBEnv && JBEnvAlreadyInsertedCount == 0 && !hasSafeModeVariable && !hideAlreadySet)) {
 		// we're already good, just call orig
 		r = orig(&childPid, envp);
 	}
@@ -314,6 +389,12 @@ static int spawn_exec_hook_common(bool isExec,
 					strcat(newLibraryInsert, existingLibraryInserts);
 				}
 				envbuf_setenv(&envc, "DYLD_INSERT_LIBRARIES", newLibraryInsert);
+			}
+			if (wantsHide) {
+				envbuf_setenv(&envc, "JB_HIDE", "1");
+			}
+			else {
+				envbuf_unsetenv(&envc, "JB_HIDE");
 			}
 		}
 		else {
@@ -345,6 +426,7 @@ static int spawn_exec_hook_common(bool isExec,
 			}
 			envbuf_unsetenv(&envc, "_SafeMode");
 			envbuf_unsetenv(&envc, "_MSSafeMode");
+			envbuf_unsetenv(&envc, "JB_HIDE");
 		}
 
 		r = orig(&childPid, envc);

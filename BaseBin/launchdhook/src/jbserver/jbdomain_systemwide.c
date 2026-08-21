@@ -194,19 +194,27 @@ int systemwide_process_checkin(audit_token_t *processToken, char **rootPathOut, 
 	systemwide_get_boot_uuid(bootUUIDOut);
 
 	// Generate sandbox extensions for the requesting process
-	char *sandboxExtensionsArr[] = {
-		// Make /var/jb readable and executable
-		sandbox_extension_issue_file_to_process("com.apple.app-sandbox.read", JBROOT_PATH(""), 0, *processToken),
-		sandbox_extension_issue_file_to_process("com.apple.sandbox.executable", JBROOT_PATH(""), 0, *processToken),
+	// Skip for apps with per-app hide enabled so they cannot access the jailbreak root
+	// Path-hiding hooks in systemhook still conceal /var/jb from libc APIs
+	extern bool should_hide_jailbreak_for_executable(const char *path);
+	if (should_hide_jailbreak_for_executable(procPath)) {
+		*sandboxExtensionsOut = strdup("");
+	}
+	else {
+		char *sandboxExtensionsArr[] = {
+			// Make /var/jb readable and executable
+			sandbox_extension_issue_file_to_process("com.apple.app-sandbox.read", JBROOT_PATH(""), 0, *processToken),
+			sandbox_extension_issue_file_to_process("com.apple.sandbox.executable", JBROOT_PATH(""), 0, *processToken),
 
-		// Make /var/jb/var/mobile writable
-		sandbox_extension_issue_file_to_process("com.apple.app-sandbox.read-write", JBROOT_PATH("/var/mobile"), 0, *processToken),
-	};
-	int sandboxExtensionsCount = sizeof(sandboxExtensionsArr) / sizeof(char *);
-	*sandboxExtensionsOut = combine_strings('|', sandboxExtensionsArr, sandboxExtensionsCount);
-	for (int i = 0; i < sandboxExtensionsCount; i++) {
-		if (sandboxExtensionsArr[i]) {
-			free(sandboxExtensionsArr[i]);
+			// Make /var/jb/var/mobile writable
+			sandbox_extension_issue_file_to_process("com.apple.app-sandbox.read-write", JBROOT_PATH("/var/mobile"), 0, *processToken),
+		};
+		int sandboxExtensionsCount = sizeof(sandboxExtensionsArr) / sizeof(char *);
+		*sandboxExtensionsOut = combine_strings('|', sandboxExtensionsArr, sandboxExtensionsCount);
+		for (int i = 0; i < sandboxExtensionsCount; i++) {
+			if (sandboxExtensionsArr[i]) {
+				free(sandboxExtensionsArr[i]);
+			}
 		}
 	}
 
